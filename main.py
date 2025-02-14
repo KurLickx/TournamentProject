@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from jose import jwt
 from datetime import datetime, timedelta
 from database import Base, engine, SessionLocal
-from models import User, Team, Tournament, Result 
+from models import User, Team, Tournament, Result
 from schemas import TournamentCreate, TeamCreate, ResultCreate, UserCreate, UserLogin
 from utils import calculate_team_rating
 from passlib.context import CryptContext
