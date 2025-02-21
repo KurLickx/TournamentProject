@@ -232,7 +232,7 @@ def update_tournament_name(tournament_id: int, new_name: str, db: Session = Depe
     return {"msg": "Tournament name updated successfully"}
 
 
-@app.websocket("/ws/notify") #Костилі на Вебах ранковий андрій пофіксь пж 24.12   ЭЭЭЭЭЭ? 27.12
+@app.websocket("/ws/notify") 
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     connections.append(websocket)
