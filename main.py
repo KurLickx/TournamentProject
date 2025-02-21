@@ -59,6 +59,8 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
     return {"msg": "User registered successfully"}
+
+
 @app.post("/token")
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = authenticate_user(db, form_data.username, form_data.password)
@@ -66,6 +68,8 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
         raise HTTPException(status_code=401, detail="Incorrect username or password")
     access_token = create_access_token(data={"sub": user.name})
     return {"access_token": access_token, "token_type": "bearer"}
+
+
 @app.post("/tournaments/", response_model=TournamentCreate)
 def create_tournament(tournament: TournamentCreate, db: Session = Depends(get_db)):
     db_tournament = Tournament(**tournament.dict())
@@ -73,6 +77,8 @@ def create_tournament(tournament: TournamentCreate, db: Session = Depends(get_db
     db.commit()
     db.refresh(db_tournament)
     return db_tournament
+
+
 @app.post("/teams/create")
 def create_team(team: TeamCreate, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -89,6 +95,8 @@ def create_team(team: TeamCreate, db: Session = Depends(get_db), token: str = De
     user.team_id = db_team.id
     db.commit()
     return {"msg": f"Team '{team.name}' created successfully, and user '{user.name}' is added as a member."}
+
+
 @app.post("/teams/join/{team_id}")
 def join_team(team_id: int, db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -104,10 +112,14 @@ def join_team(team_id: int, db: Session = Depends(get_db), token: str = Depends(
     user.team_id = team.id
     db.commit()
     return {"msg": f"User '{user.name}' has joined the team '{team.name}' successfully."}
+
+
 @app.get("/tournaments/", response_model=list[TournamentCreate])
 def get_tournaments(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     tournaments = db.query(Tournament).offset(skip).limit(limit).all()
     return tournaments
+
+
 @app.put("/tournaments/{tournament_id}", response_model=TournamentCreate)
 def update_tournament(tournament_id: int, tournament: TournamentCreate, db: Session = Depends(get_db)):
     db_tournament = db.query(Tournament).filter(Tournament.id == tournament_id).first()
@@ -118,6 +130,8 @@ def update_tournament(tournament_id: int, tournament: TournamentCreate, db: Sess
     db.commit()
     db.refresh(db_tournament)
     return db_tournament
+
+
 @app.delete("/tournaments/{tournament_id}", status_code=204)
 def delete_tournament(tournament_id: int, db: Session = Depends(get_db)):
     db_tournament = db.query(Tournament).filter(Tournament.id == tournament_id).first()
@@ -126,6 +140,8 @@ def delete_tournament(tournament_id: int, db: Session = Depends(get_db)):
     db.delete(db_tournament)
     db.commit()
     return
+
+
 @app.post("/results/", response_model=ResultCreate)
 def create_result(result: ResultCreate, db: Session = Depends(get_db)):
     db_result = Result(**result.dict())
@@ -134,6 +150,8 @@ def create_result(result: ResultCreate, db: Session = Depends(get_db)):
     db.refresh(db_result)
     calculate_team_rating(db, result.team_id)
     return db_result
+
+
 @app.get("/teams/{team_id}/rating")
 def get_team_rating(team_id: int, db: Session = Depends(get_db)):
     team = db.query(Team).filter(Team.id == team_id).first()
@@ -141,6 +159,78 @@ def get_team_rating(team_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Team not found")
     return {"team_id": team.id, "rating": team.rating}
 connections = []
+
+
+@app.delete("/users/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete(user)
+    db.commit()
+    return {"msg": "User deleted successfully"}
+
+
+@app.delete("/teams/{team_id}")
+def delete_team(team_id: int, db: Session = Depends(get_db)):
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    db.delete(team)
+    db.commit()
+    return {"msg": "Team deleted successfully"}
+
+
+@app.delete("/tournaments/{tournament_id}")
+def delete_tournament(tournament_id: int, db: Session = Depends(get_db)):
+    tournament = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+    if not tournament:
+        raise HTTPException(status_code=404, detail="Tournament not found")
+    db.delete(tournament)
+    db.commit()
+    return {"msg": "Tournament deleted successfully"}
+
+
+@app.put("/users/{user_id}/update_login")
+def update_user_login(user_id: int, new_name: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.name = new_name
+    db.commit()
+    db.refresh(user)
+    return {"msg": "User login updated successfully"}
+
+
+@app.put("/users/{user_id}/update_password")
+def update_user_password(user_id: int, new_password: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.hashed_password = get_password_hash(new_password)
+    db.commit()
+    return {"msg": "User password updated successfully"}
+
+
+@app.put("/teams/{team_id}/update_name")
+def update_team_name(team_id: int, new_name: str, db: Session = Depends(get_db)):
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    team.name = new_name
+    db.commit()
+    return {"msg": "Team name updated successfully"}
+
+
+@app.put("/tournaments/{tournament_id}/update_name")
+def update_tournament_name(tournament_id: int, new_name: str, db: Session = Depends(get_db)):
+    tournament = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+    if not tournament:
+        raise HTTPException(status_code=404, detail="Tournament not found")
+    tournament.name = new_name
+    db.commit()
+    return {"msg": "Tournament name updated successfully"}
+
 
 @app.websocket("/ws/notify") #Костилі на Вебах ранковий андрій пофіксь пж 24.12   ЭЭЭЭЭЭ? 27.12
 async def websocket_endpoint(websocket: WebSocket):
